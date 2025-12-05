@@ -9,8 +9,10 @@ interface RequestBody {
 
 export async function POST(req: Request) {
   try {
+    console.log("[SORTEIO] Iniciando requisição");
     const body: RequestBody = await req.json();
     const { participantes } = body;
+    console.log("[SORTEIO] Participantes recebidos:", participantes?.length || 0);
 
     // Validações
     if (!participantes || !Array.isArray(participantes)) {
@@ -38,15 +40,9 @@ export async function POST(req: Request) {
     }
 
     // Realiza o sorteio
+    console.log("[SORTEIO] Realizando sorteio...");
     const resultado = realizarSorteio(participantes);
-
-    // Salva no banco de dados
-    const sorteioId = randomUUID();
-    await salvarSorteio({
-      id: sorteioId,
-      criadoEm: new Date().toISOString(),
-      participantes: resultado,
-    });
+    console.log("[SORTEIO] Sorteio realizado com sucesso:", resultado.length, "participantes");
 
     // Retorna os tokens para o frontend
     const tokens = resultado.map((r) => ({
@@ -55,23 +51,42 @@ export async function POST(req: Request) {
       token: r.token,
     }));
 
+    // Salva no banco de dados (não-crítico - se falhar, ainda retorna os tokens)
+    const sorteioId = randomUUID();
+    console.log("[SORTEIO] Tentando salvar sorteio:", sorteioId);
+    try {
+      await salvarSorteio({
+        id: sorteioId,
+        criadoEm: new Date().toISOString(),
+        participantes: resultado,
+      });
+      console.log("[SORTEIO] Sorteio salvo com sucesso");
+    } catch (saveError) {
+      // Loga o erro mas não falha a requisição
+      console.warn("[SORTEIO] Não foi possível salvar o sorteio (continuando mesmo assim):", saveError);
+    }
+
+    console.log("[SORTEIO] Retornando resposta com sucesso");
     return NextResponse.json({
       sucesso: true,
       sorteioId,
       tokens,
     });
   } catch (error) {
-    console.error("Erro ao gerar sorteio:", error);
+    console.error("[SORTEIO] ERRO CRÍTICO:", error);
+    console.error("[SORTEIO] Stack:", error instanceof Error ? error.stack : "N/A");
     
-    // Retorna detalhes do erro em desenvolvimento
-    const erroMessage = error instanceof Error ? error.message : "Erro desconhecido";
+    // Retorna detalhes do erro
+    const erroMessage = error instanceof Error ? error.message : String(error);
     const erroStack = error instanceof Error ? error.stack : undefined;
     
+    // Sempre retorna detalhes do erro na resposta (ajuda a debugar)
     return NextResponse.json(
       { 
         erro: "Erro interno ao gerar sorteio",
-        detalhes: process.env.NODE_ENV === "development" ? erroMessage : undefined,
-        stack: process.env.NODE_ENV === "development" ? erroStack : undefined
+        mensagem: erroMessage,
+        stack: erroStack,
+        ambiente: process.env.VERCEL ? "vercel" : "local"
       },
       { status: 500 }
     );

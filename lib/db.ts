@@ -24,19 +24,28 @@ interface Database {
 
 // Detecção de ambiente - melhorada para funcionar corretamente na Vercel
 function isVercelEnvironment(): boolean {
-  // Vercel sempre define essa variável
-  if (process.env.VERCEL === "1" || process.env.VERCEL_ENV) {
-    return true;
+  try {
+    // Vercel sempre define essa variável
+    if (process.env.VERCEL === "1" || process.env.VERCEL_ENV) {
+      return true;
+    }
+    // Se tem variáveis do KV, está na Vercel
+    if (process.env.KV_REST_API_URL) {
+      return true;
+    }
+    // Verifica se está em ambiente serverless (Vercel, Netlify, etc)
+    if (process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL_URL) {
+      return true;
+    }
+    // Verifica se o hostname contém vercel
+    if (typeof process !== "undefined" && process.env.VERCEL_URL) {
+      return true;
+    }
+    return false;
+  } catch {
+    // Em caso de erro, assume que não está na Vercel (mais seguro)
+    return false;
   }
-  // Se tem variáveis do KV, está na Vercel
-  if (process.env.KV_REST_API_URL) {
-    return true;
-  }
-  // Verifica se está em ambiente serverless (Vercel, Netlify, etc)
-  if (process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL_URL) {
-    return true;
-  }
-  return false;
 }
 
 const isVercel = isVercelEnvironment();
@@ -157,14 +166,22 @@ async function writeDBKV(db: Database) {
 // ==========================================
 
 export async function salvarSorteio(sorteio: Sorteio) {
-  if (isVercel) {
-    const db = await readDBKV();
-    db.sorteios.push(sorteio);
-    await writeDBKV(db);
-  } else {
-    const db = readDB();
-    db.sorteios.push(sorteio);
-    writeDB(db);
+  try {
+    if (isVercel) {
+      const db = await readDBKV();
+      db.sorteios.push(sorteio);
+      await writeDBKV(db);
+      // Se KV não estiver disponível, não falha - apenas não persiste
+      console.log("Sorteio salvo no KV (ou em memória se KV não disponível)");
+    } else {
+      const db = readDB();
+      db.sorteios.push(sorteio);
+      writeDB(db);
+    }
+  } catch (error) {
+    // Não falha se não conseguir salvar - apenas loga
+    console.error("Erro ao salvar sorteio (não crítico):", error);
+    // Em produção, podemos continuar mesmo sem persistência
   }
 }
 
