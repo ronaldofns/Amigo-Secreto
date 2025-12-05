@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { join } from "path";
+// Imports condicionais para evitar problemas na Vercel
+// As funções do fs serão importadas apenas quando necessário (localmente)
 
 export interface ParticipanteComRastreamento {
   nome: string;
@@ -45,15 +45,26 @@ const useFileSystem = !isVercel && typeof process !== "undefined" && typeof proc
 // ==========================================
 // Implementação usando FileSystem (local)
 // ==========================================
-const DATA_FILE = join(process.cwd(), "data", "sorteios.json");
+function getDataFile(): string {
+  if (!useFileSystem) return "";
+  
+  try {
+    const { join } = require("path");
+    return join(process.cwd(), "data", "sorteios.json");
+  } catch {
+    // Se process.cwd() falhar, retorna path relativo
+    return "data/sorteios.json";
+  }
+}
 
 function ensureDataDir() {
   if (!useFileSystem) return;
   
   try {
+    const { join } = require("path");
+    const { existsSync, mkdirSync } = require("fs");
     const dataDir = join(process.cwd(), "data");
     if (!existsSync(dataDir)) {
-      const { mkdirSync } = require("fs");
       mkdirSync(dataDir, { recursive: true });
     }
   } catch (error) {
@@ -69,6 +80,8 @@ function readDB(): Database {
 
   try {
     ensureDataDir();
+    const { readFileSync, existsSync } = require("fs");
+    const DATA_FILE = getDataFile();
     if (!existsSync(DATA_FILE)) {
       return { sorteios: [] };
     }
@@ -85,6 +98,8 @@ function writeDB(db: Database) {
 
   try {
     ensureDataDir();
+    const { writeFileSync } = require("fs");
+    const DATA_FILE = getDataFile();
     writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
   } catch (error) {
     console.error("Erro ao escrever no filesystem:", error);

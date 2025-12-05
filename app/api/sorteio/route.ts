@@ -62,8 +62,17 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("Erro ao gerar sorteio:", error);
+    
+    // Retorna detalhes do erro em desenvolvimento
+    const erroMessage = error instanceof Error ? error.message : "Erro desconhecido";
+    const erroStack = error instanceof Error ? error.stack : undefined;
+    
     return NextResponse.json(
-      { erro: "Erro interno ao gerar sorteio" },
+      { 
+        erro: "Erro interno ao gerar sorteio",
+        detalhes: process.env.NODE_ENV === "development" ? erroMessage : undefined,
+        stack: process.env.NODE_ENV === "development" ? erroStack : undefined
+      },
       { status: 500 }
     );
   }
