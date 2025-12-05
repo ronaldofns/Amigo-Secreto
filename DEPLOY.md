@@ -102,10 +102,29 @@ git commit -m "Add @vercel/kv"
 git push
 ```
 
+### Erro 500 no Servidor
+
+**Causa mais comum**: Sistema tentando usar filesystem na Vercel
+
+**Solução**: 
+1. ✅ O código foi corrigido para detectar automaticamente se está na Vercel
+2. Verifique os logs da Vercel para ver o erro exato:
+   - Vá em **Deployments** → Clique no deployment com erro
+   - Veja a aba **Functions** ou **Logs**
+3. Se o erro for relacionado a filesystem, certifique-se de que:
+   - A variável `VERCEL=1` está definida (automático na Vercel)
+   - Ou configure o Vercel KV (recomendado)
+
 ### Dados não persistem
 - Verifique se o KV foi criado corretamente
 - Verifique se as variáveis de ambiente estão configuradas
 - Veja os logs da Vercel para erros
+- **Sem KV**: O sistema funcionará, mas dados não persistem entre restarts
+
+### .env.local não funciona
+- `.env.local` é apenas para desenvolvimento local
+- Na Vercel, use **Settings → Environment Variables**
+- Variáveis do KV são configuradas automaticamente quando você cria o banco
 
 ## 💰 Custos
 

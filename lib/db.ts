@@ -22,9 +22,25 @@ interface Database {
   sorteios: Sorteio[];
 }
 
-// Detecção de ambiente
-const isVercel = process.env.VERCEL === "1" || !!process.env.KV_REST_API_URL;
-const useFileSystem = !isVercel && typeof process !== "undefined" && process.cwd;
+// Detecção de ambiente - melhorada para funcionar corretamente na Vercel
+function isVercelEnvironment(): boolean {
+  // Vercel sempre define essa variável
+  if (process.env.VERCEL === "1" || process.env.VERCEL_ENV) {
+    return true;
+  }
+  // Se tem variáveis do KV, está na Vercel
+  if (process.env.KV_REST_API_URL) {
+    return true;
+  }
+  // Verifica se está em ambiente serverless (Vercel, Netlify, etc)
+  if (process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL_URL) {
+    return true;
+  }
+  return false;
+}
+
+const isVercel = isVercelEnvironment();
+const useFileSystem = !isVercel && typeof process !== "undefined" && typeof process.cwd === "function";
 
 // ==========================================
 // Implementação usando FileSystem (local)
@@ -33,10 +49,16 @@ const DATA_FILE = join(process.cwd(), "data", "sorteios.json");
 
 function ensureDataDir() {
   if (!useFileSystem) return;
-  const dataDir = join(process.cwd(), "data");
-  if (!existsSync(dataDir)) {
-    const { mkdirSync } = require("fs");
-    mkdirSync(dataDir, { recursive: true });
+  
+  try {
+    const dataDir = join(process.cwd(), "data");
+    if (!existsSync(dataDir)) {
+      const { mkdirSync } = require("fs");
+      mkdirSync(dataDir, { recursive: true });
+    }
+  } catch (error) {
+    // Se falhar, não usa filesystem
+    console.error("Erro ao criar diretório de dados:", error);
   }
 }
 
@@ -45,22 +67,28 @@ function readDB(): Database {
     return { sorteios: [] };
   }
 
-  ensureDataDir();
-  if (!existsSync(DATA_FILE)) {
-    return { sorteios: [] };
-  }
   try {
+    ensureDataDir();
+    if (!existsSync(DATA_FILE)) {
+      return { sorteios: [] };
+    }
     const data = readFileSync(DATA_FILE, "utf-8");
     return JSON.parse(data);
-  } catch {
+  } catch (error) {
+    console.error("Erro ao ler do filesystem:", error);
     return { sorteios: [] };
   }
 }
 
 function writeDB(db: Database) {
   if (!useFileSystem) return;
-  ensureDataDir();
-  writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+
+  try {
+    ensureDataDir();
+    writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+  } catch (error) {
+    console.error("Erro ao escrever no filesystem:", error);
+  }
 }
 
 // ==========================================
@@ -73,8 +101,9 @@ async function getKV() {
     // Tenta usar @vercel/kv
     const { kv } = await import("@vercel/kv");
     return kv;
-  } catch {
+  } catch (error) {
     // Se não estiver disponível, retorna null
+    console.error("KV não disponível:", error);
     return null;
   }
 }
@@ -96,7 +125,10 @@ async function readDBKV(): Promise<Database> {
 
 async function writeDBKV(db: Database) {
   const kv = await getKV();
-  if (!kv) return;
+  if (!kv) {
+    console.warn("KV não disponível - dados não serão persistidos");
+    return;
+  }
 
   try {
     await kv.set("sorteios:database", db);
