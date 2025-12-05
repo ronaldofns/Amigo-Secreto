@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎁 Amigo Secreto
 
-## Getting Started
+Sistema completo para realizar sorteios de amigo secreto de forma segura e fácil!
 
-First, run the development server:
+## ✨ Funcionalidades
 
+- ✅ Adicionar participantes com nome e WhatsApp
+- ✅ Validação: ninguém pode tirar a si mesmo
+- ✅ Garantia: cada pessoa é escolhida exatamente uma vez
+- ✅ Funciona com número par ou ímpar de participantes
+- ✅ Links secretos únicos para cada participante
+- ✅ Página de revelação com suspense
+- ✅ Envio direto via WhatsApp
+- ✅ Interface moderna e responsiva
+
+## 🚀 Como Usar Localmente
+
+1. Instale as dependências:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Execute o servidor de desenvolvimento:
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Acesse `http://localhost:3000`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🌐 Deploy na Vercel
 
-## Learn More
+### Opção 1: Com Vercel KV (Recomendado)
 
-To learn more about Next.js, take a look at the following resources:
+1. **Crie um projeto na Vercel:**
+   ```bash
+   npm i -g vercel
+   vercel
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **Configure o Vercel KV:**
+   - No dashboard da Vercel, vá em "Storage"
+   - Clique em "Create Database" → "KV"
+   - Anote as variáveis de ambiente geradas
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. **Instale o pacote:**
+   ```bash
+   npm install @vercel/kv
+   ```
 
-## Deploy on Vercel
+4. **Configure as variáveis de ambiente na Vercel:**
+   - Vá em Settings → Environment Variables
+   - As variáveis do KV já estarão disponíveis automaticamente
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+5. **Faça o deploy:**
+   ```bash
+   vercel --prod
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Opção 2: Sem Vercel KV (Funciona apenas localmente)
+
+O código já está preparado para funcionar localmente sem KV. Mas na Vercel, sem KV, os dados não serão persistentes (se perderão a cada restart).
+
+## 📋 Requisitos
+
+- Node.js 18+
+- npm ou yarn
+
+## 🏗️ Estrutura
+
+```
+├── app/
+│   ├── api/
+│   │   ├── sorteio/          # API para criar sorteio
+│   │   └── resultado/[token] # API para buscar resultado
+│   ├── resultado/[token]/    # Página de revelação
+│   └── page.tsx              # Página principal
+├── components/
+│   └── FormParticipantes.tsx # Componente principal
+├── lib/
+│   ├── db.ts                 # Sistema de persistência
+│   └── sorteio.ts            # Algoritmo de sorteio
+└── data/                     # Dados locais (não commitado)
+    └── sorteios.json
+```
+
+## 🔒 Segurança
+
+- Cada participante recebe um token único
+- Ninguém pode ver o resultado de outros participantes
+- Tokens são gerados com UUID v4
+- Validação no servidor para garantir integridade
+
+## 📝 Notas
+
+- Os dados são salvos em `data/sorteios.json` localmente
+- Na Vercel, os dados são salvos no Vercel KV
+- O algoritmo garante que cada pessoa seja escolhida exatamente uma vez
+- Funciona perfeitamente com número ímpar de participantes
+
+## 🤝 Contribuindo
+
+Sinta-se livre para sugerir melhorias!
